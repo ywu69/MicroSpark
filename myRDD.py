@@ -1,9 +1,18 @@
 __author__ = 'pengzhan'
 import itertools
 import operator
+
+
+class Partition(object):
+    def __init__(self,index,datalist=None,blocklist={}):
+        self.index = index
+        self.num_of_part = len(blocklist)
+        self.datalist = datalist
+        self.blocklist = blocklist
+
 class RDD(object):
 
-    def __init__(self, prev=None, func=None, datalist = None, isCached=False):
+    def __init__(self, prev=None, func=None, isCached=False, partition=None):
         if not isinstance(prev, RDD):
             self.isFirst = True
             if func is None:
@@ -17,34 +26,48 @@ class RDD(object):
             prev_func = prev.func
             def pipeline_func(iterator):
                 if prev.isCached:
-                    return func(prev.datalist)
+                    return func(prev.getDataList())
                 return func(prev_func(iterator))
             self.func = pipeline_func
+
+        #partition paras:
         self.isCached = isCached
-        self.datalist = datalist
+        if partition is None and isinstance(prev, RDD):
+            self.partition = prev.partition
+        else:
+            self.partition = partition
+
+    def getPartition(self):
+        return self.partition
+
+    def getDataList(self):
+        return self.partition.datalist
+
+    def setDataList(self, dlist):
+        self.partition.datalist = dlist
 
     def collect(self):
         if self.func is None:
-            return self.datalist
-        return self.func(self.datalist)
+            return self.getDataList()
+        return self.func(self.getDataList())
 
     # map(f :T->U) : RDD[T] -> RDD[U]
     def map(self, f):
         def func(iterator):
             return map(f, iterator)
-        return RDD(self, func, self.datalist)
+        return RDD(self, func)
 
     # filter(f:T->Bool) : RDD[T] -> RDD[T]
     def filter(self,f):
         def func(iterator):
             return filter(f, iterator)
-        return RDD(self, func, self.datalist)
+        return RDD(self,func)
 
     # flatMap( f : T -> Seq[U]) : RDD[T] -> RDD[U]
     def flatMap(self, f):
         def func(iterator):
             return list(itertools.chain.from_iterable(map(f, iterator)))
-        return RDD(self, func, self.datalist)
+        return RDD(self,func)
 
     # sample(fraction : Float) : RDD[T] -> RDD[T] (Deterministic sampling)
 
@@ -53,7 +76,7 @@ class RDD(object):
         def func(iterator):
             dic = self._groupByKey(iterator)
             return map(lambda x:(x,dic[x]),dic)
-        return RDD(self, func, self.datalist)
+        return RDD(self,func)
 
     #return a dic
     def _groupByKey(self,iterator):
@@ -75,7 +98,7 @@ class RDD(object):
         def func(iterator):
             dic = self._groupByKey(iterator)
             return map(lambda x:(x,reduce(f,dic[x])),dic)
-        return RDD(self, func, self.datalist)
+        return RDD(self,func)
     # union() : (RDD[T], RDD[T]) -> RDD[T]
     def union(self):
         pass
@@ -94,20 +117,26 @@ class RDD(object):
 
             f.close()
             return iterator
-        return RDD(self, func, self.datalist)
+        return RDD(self,func)
 
     def cache(self):
-        self.datalist = self.collect()
+        self.setDataList(self.collect())
         self.isCached = True
         return self
 
+
+def test():
+    pass
+
 if __name__ == '__main__':
+    test()
     #s = ""
     #print map(lambda x:x.split(" ") , ['1 2 4 5', '2 3 5 7'])
-    rdd = RDD(None,None,[1,1,3,4]).map(lambda x:(x,[x*x]))#.groupByKey()
+    p = Partition(1,['a','b','c','c'])
+    rdd = RDD(None,None,False,p)
+    rdd = rdd.map(lambda x:(x,1))#.groupByKey()
     rdd = rdd.reduceByKey(operator.add)
-    print "datalist =", rdd.datalist;
-    print "result =", rdd.collect();
-
+    print "datalist =", rdd.getDataList()
+    print "result =", rdd.collect()
 
 
