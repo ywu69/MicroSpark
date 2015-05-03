@@ -1,5 +1,6 @@
 __author__ = 'pengzhan'
 import itertools
+import operator
 class RDD(object):
 
     def __init__(self, prev=None, func=None, datalist = None, isCached=False):
@@ -50,15 +51,21 @@ class RDD(object):
     # groupByKey() : RDD[(K, V)] -> RDD[(K, Seq[V])]
     def groupByKey(self):
         def func(iterator):
-            dic = {}
-            for x in iterator:
-                dic[x[0]] = []
-            for x in iterator:
-                if not isinstance(x[1],list):
-                    x = (x[0],[x[1]])
-                dic[x[0]].extend(x[1])
-            return map(lambda x:[x,dic[x]],dic)
+            dic = self._groupByKey(iterator)
+            return map(lambda x:(x,dic[x]),dic)
         return RDD(self, func, self.datalist)
+
+    #return a dic
+    def _groupByKey(self,iterator):
+        dic = {}
+        for x in iterator:
+            if isinstance(x,tuple):
+                dic[x[0]] = []
+        for x in iterator:
+            if not isinstance(x[1],list):
+                x = (x[0],[x[1]])
+            dic[x[0]].extend(x[1])
+        return dic
 
     # reduceByKey( f : (V, V) -> V) : RDD[(K, V)] -> RDD[(K, V)]
     #>>> rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 1)])
@@ -66,8 +73,9 @@ class RDD(object):
     #[('a', 2), ('b', 1)]
     def reduceByKey(self, f):
         def func(iterator):
-            sel
-        pass
+            dic = self._groupByKey(iterator)
+            return map(lambda x:(x,reduce(f,dic[x])),dic)
+        return RDD(self, func, self.datalist)
     # union() : (RDD[T], RDD[T]) -> RDD[T]
     def union(self):
         pass
@@ -96,7 +104,8 @@ class RDD(object):
 if __name__ == '__main__':
     #s = ""
     #print map(lambda x:x.split(" ") , ['1 2 4 5', '2 3 5 7'])
-    rdd = RDD(None,None,[1,2,3,4]).map(lambda x:(x,[x*x])).groupByKey()
+    rdd = RDD(None,None,[1,1,3,4]).map(lambda x:(x,[x*x]))#.groupByKey()
+    rdd = rdd.reduceByKey(operator.add)
     print "datalist =", rdd.datalist;
     print "result =", rdd.collect();
 
