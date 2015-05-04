@@ -3,6 +3,8 @@ import zerorpc
 import sys
 import socket
 import gevent
+import StringIO
+import pickle
 
 class Worker(object):
     def __init__(self, master_addr, worker_ip, worker_port):
@@ -12,6 +14,7 @@ class Worker(object):
         self.c = zerorpc.Client()
         self.c.connect("tcp://"+master_addr)
         self.c.register(worker_ip, worker_port)
+        self.RDD = ""
 
     def controller(self):
         while True:
@@ -22,10 +25,18 @@ class Worker(object):
         pass
         print('[Worker] Ping from Master')
 
+    def setRDD(self, RDD):
+        input = StringIO.StringIO(RDD)
+        unpickler = pickle.Unpickler(input)
+        self.RDD = unpickler.load()
+        # set current partition
+        self.RDD.get_ancester().set_current_partition(worker_ip, worker_port)
+        print self.RDD.collect()
+
 if __name__ == '__main__':
     worker_ip = socket.gethostbyname(socket.gethostname())
-    worker_port = '8000'#sys.argv[1]
-    master_addr = '127.0.0.1:4242'#sys.argv[2];
+    worker_port = sys.argv[1]
+    master_addr = 'localhost:4242'#sys.argv[2];
     s = zerorpc.Server(Worker(master_addr,worker_ip,worker_port))
     s.bind('tcp://' + worker_ip+":"+worker_port)
     s.run()
