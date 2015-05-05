@@ -1,6 +1,7 @@
 __author__ = 'pengzhan'
 import itertools
 import operator
+from functools import reduce
 
 
 class Partition(object):
@@ -120,6 +121,21 @@ class RDD(object):
     # partitionBy( p : Partitioner[K]) : RDD[(K, V)] -> RDD[(K, V)]
 
 
+    def reduce(self, f):
+        # def func(iterator):
+        #     iterator = iter(iterator)
+        #     try:
+        #         initial = next(iterator)
+        #     except StopIteration:
+        #         return
+        #     yield reduce(f, iterator, initial)
+
+        vals = self.collect()
+        if vals:
+            return reduce(f, vals)
+        raise ValueError("Can not reduce() empty RDD")
+
+
     def TextFile(self, filename):
         self.input_filename = filename
 
@@ -127,7 +143,8 @@ class RDD(object):
             f = open(filename)
             print "map:" + str(self.partition_map)
             print "Tuple:" + str(self.get_current_partition())
-            iterator = f.read()[self.current_partition[1]: self.current_partition[1] + self.current_partition[0]]
+            iterator = [f.read()[self.current_partition[1]: self.current_partition[1] + self.current_partition[0]]]
+            # iterator = [f.read()]
             f.close()
             return iterator
         return RDD(self,func)
@@ -180,24 +197,6 @@ if __name__ == '__main__':
     #test()
     #s = ""
     #print map(lambda x:x.split(" ") , ['1 2 4 5', '2 3 5 7'])
-    p = Partition(1,['a','b','c','c'])
-    rdd = RDD(None,None,False,p)
-    rdd = rdd.map(lambda x:(x,1))#.groupByKey()
-    rdd = rdd.reduceByKey(operator.add)
-    print "datalist =", rdd.getDataList()
-    print "result =", rdd.collect()
-
     R = RDD()
-
-    rdd = R.TextFile("inputfile2.txt")
-
-    print "try set parttion"
-    rdd.set_partition(1)
-
-    rdd.get_ancester().current_partition = (1,2)
-
-
-    print rdd.get_input_filename()
-
-    print "datalist =", rdd.datalist;
-    print "result =", rdd.collect();
+    rdd = R.TextFile("inputfile2.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
+    print rdd.collect()

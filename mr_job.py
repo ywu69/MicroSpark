@@ -13,7 +13,7 @@ if __name__ == '__main__':
     c = zerorpc.Client()
     c.connect("tcp://"+master_addr)
     R = RDD()
-    rdd = R.TextFile(input_filename).flatMap(lambda x: x.split()).map(lambda x:(x,[int(x)*int(x)])).groupByKey()
+    rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
 
     output = StringIO.StringIO()
     pickler = cloudpickle.CloudPickler(output)

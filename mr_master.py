@@ -78,14 +78,20 @@ class Master(object):
         pickle_object = output.getvalue()
 
         for w in self.workers:
-            c = zerorpc.Client()
-            print str(w[0]) + ":" + str(w[1])
-            c.connect("tcp://" + w[0] + ":" + w[1])
-            c.setRDD(pickle_object)
+            self.assign_rdd_to_worker(w, pickle_object)
 
         print "in setjob_async"
-
         pass
+
+    def assign_rdd_to_worker(self, w, pickle_object):
+        gevent.spawn(self.assign_rdd_to_worker_async, w, pickle_object)
+
+    def assign_rdd_to_worker_async(self, w, pickle_object):
+        c = zerorpc.Client()
+        print str(w[0]) + ":" + str(w[1])
+        c.connect("tcp://" + w[0] + ":" + w[1])
+        c.setRDD(pickle_object)
+
 
 
     def create_RDD_partition_map(self, chunks):
