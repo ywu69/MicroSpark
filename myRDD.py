@@ -151,14 +151,25 @@ class RDD(object):
 
             size = len(lines)/num_workers
 
-            start = self.get_current_partition_index() * size
-            end = (self.get_current_partition_index() + 1) * size
+            if self.get_current_partition_index() == num_workers -1: # last one
+                start = self.get_current_partition_index() * size
+                iterator = lines[start:]
 
-            print "lines: " + str(len(lines))
-            print "size: " + str(size)
-            print "cut: [" + str(start) + ", " + str(end) + ")"
+                print "lines: " + str(len(lines))
+                print "size: " + str(size)
+                print "cut: [" + str(start) + ", " + str("max") + ")"
+            else:
+                start = self.get_current_partition_index() * size
+                end = (self.get_current_partition_index() + 1) * size
+                iterator = lines[start: end]
 
-            iterator = lines[start: end]
+                print "lines: " + str(len(lines))
+                print "size: " + str(size)
+                print "cut: [" + str(start) + ", " + str(end) + ")"
+
+
+
+
             # iterator = [f.read()[self.current_partition[1]: self.current_partition[1] + self.current_partition[0]]]
             f.close()
             return iterator
