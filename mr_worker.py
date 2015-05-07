@@ -30,7 +30,7 @@ class Worker(object):
         unpickler = pickle.Unpickler(input)
         self.RDD = unpickler.load()
         # set current partition
-        self.RDD.get_ancester().set_current_partition(worker_ip, worker_port)
+        self.RDD.get_ancester().set_current_partition_index(worker_ip, worker_port)
         print self.RDD.collect()
 
 if __name__ == '__main__':

@@ -2,6 +2,8 @@ __author__ = 'pengzhan'
 import itertools
 import operator
 from functools import reduce
+import re
+from operator import add
 
 
 class Partition(object):
@@ -39,7 +41,7 @@ class RDD(object):
         else:
             self.partition = partition
 
-        self.current_partition = ()
+        self.current_partition_index = 0
         self.isCached = isCached
         self.datalist = datalist
         self.partition_map = {}
@@ -142,9 +144,22 @@ class RDD(object):
         def func(yyy):
             f = open(filename)
             print "map:" + str(self.partition_map)
-            print "Tuple:" + str(self.get_current_partition())
-            iterator = [f.read()[self.current_partition[1]: self.current_partition[1] + self.current_partition[0]]]
-            # iterator = [f.read()]
+            print "current partition index:" + str(self.get_current_partition_index())
+
+            lines = f.readlines()
+            num_workers = len(self.partition_map.keys())
+
+            size = len(lines)/num_workers
+
+            start = self.get_current_partition_index() * size
+            end = (self.get_current_partition_index() + 1) * size
+
+            print "lines: " + str(len(lines))
+            print "size: " + str(size)
+            print "cut: [" + str(start) + ", " + str(end) + ")"
+
+            iterator = lines[start: end]
+            # iterator = [f.read()[self.current_partition[1]: self.current_partition[1] + self.current_partition[0]]]
             f.close()
             return iterator
         return RDD(self,func)
@@ -168,12 +183,12 @@ class RDD(object):
     def test(self):
         pass
 
-    def set_current_partition(self, ip, port):
-        self.current_partition = self.partition_map[str(ip) + ":" + str(port)]
-        print "current_partition: " + str(self.current_partition)
+    def set_current_partition_index(self, ip, port):
+        self.current_partition_index = self.partition_map[str(ip) + ":" + str(port)]
+        print "current_partition_index: " + str(self.current_partition_index)
 
-    def get_current_partition(self):
-        return self.current_partition
+    def get_current_partition_index(self):
+        return self.current_partition_index
 
     def set_partition(self, partition):
         self.partition = partition
@@ -193,10 +208,39 @@ class RDD(object):
     def get_input_filename(self):
         print "get_input:" + str(self.input_filename)
         return self.input_filename
+
+
+def parseNeighbors(urls):
+        """Parses a urls pair string into urls pair."""
+        parts = re.split(r'\s+', urls)
+        return parts[0], parts[1]
+def computeContribs(urls, rank):
+    """Calculates URL contributions to the rank of other URLs."""
+    num_urls = len(urls)
+    for url in urls:
+        yield (url, rank / num_urls)
+
 if __name__ == '__main__':
-    #test()
-    #s = ""
-    #print map(lambda x:x.split(" ") , ['1 2 4 5', '2 3 5 7'])
     R = RDD()
-    rdd = R.TextFile("inputfile2.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
-    print rdd.collect()
+    lines = R.TextFile("inputfile4.txt")
+
+    # Loads all URLs from input file and initialize their neighbors.
+    links = lines.map(lambda urls: parseNeighbors(urls))\
+        .map(lambda x: (x, None)).reduceByKey(lambda x, _: x).map(lambda x: x[0])\
+        .groupByKey()
+    # Loads all URLs with other URL(s) link to from input file and initialize ranks of them to one.
+    ranks = links.map(lambda url_neighbors: (url_neighbors[0], 1.0))
+
+    # Calculates and updates URL ranks continuously using PageRank algorithm.
+    for iteration in range(10):
+        # Calculates URL contributions to the rank of other URLs.
+        contribs = links.flatMap(
+            lambda url_urls_rank: computeContribs(url_urls_rank[1][0], url_urls_rank[1][1]))
+
+        # Re-calculates URL ranks based on neighbor contributions.
+        ranks = contribs.reduceByKey(add).map(lambda rank: rank * 0.85 + 0.15)
+
+    # Collects all URL ranks and dump them to console.
+    for (link, rank) in ranks.collect():
+        print("%s has rank: %s." % (link, rank))
+

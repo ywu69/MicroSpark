@@ -65,8 +65,8 @@ class Master(object):
         # set partition as num of workers
         intermediateRDD.get_ancester().set_partition(len(self.workers))
 
-        chunks = self.split_file(input_filename, len(self.workers))
-        partition_map = self.create_RDD_partition_map(chunks)
+        partition_map = self.create_RDD_partition_map()
+
         print partition_map
         intermediateRDD.get_ancester().set_partition_map(partition_map)
 
@@ -94,18 +94,13 @@ class Master(object):
 
 
 
-    def create_RDD_partition_map(self, chunks):
-        if len(chunks) != len(self.workers):
-            print "ERROR"
-
+    def create_RDD_partition_map(self):
         partition_map = {}
         i = 0
         for w in self.workers:
-            partition_map[w[0] + ":" + w[1]] = chunks[i]
+            partition_map[w[0] + ":" + w[1]] = i
             i += 1
         return partition_map
-
-
 
     def split_file(self, filename, num_worker):
         fileSize = os.path.getsize(filename)
