@@ -50,10 +50,10 @@ class Master(object):
         self.workerState[(ip,port)] = 'READY'
         gevent.spawn(self.ping_worker,(ip,port))
 
-        #####---ONLY FOR TESTING---########
-        if len(self.workers) == 2:
-            for w in self.workers:
-                self.workers[w].cal()
+        # #####---ONLY FOR TESTING---########
+        # if len(self.workers) == 2:
+        #     for w in self.workers:
+        #         self.workers[w].cal()
 
 
     def register(self, ip, port):
@@ -80,13 +80,10 @@ class Master(object):
 
         input_filename = intermediateRDD.get_ancester().get_input_filename()
 
-        # set partition as num of workers
-        intermediateRDD.get_ancester().set_partition(len(self.workers))
+        workerlist = self.create_RDD_workerlist()
 
-        worker_map = self.create_RDD_worker_map()
-
-
-        #print f.collect()
+        print workerlist
+        intermediateRDD.set_params_recv(workerlist)
 
         output = StringIO.StringIO()
         pickler = cloudpickle.CloudPickler(output)
@@ -99,6 +96,14 @@ class Master(object):
         print "in setjob_async"
         pass
 
+    def create_RDD_workerlist(self):
+        workerlist = {}
+        i = 1
+        for w in self.workers:
+            workerlist[w[0] + ":" + w[1]] = i
+            i += 1
+        return workerlist
+
     def assign_rdd_to_worker(self, w, pickle_object):
         gevent.spawn(self.assign_rdd_to_worker_async, w, pickle_object)
 
@@ -107,8 +112,6 @@ class Master(object):
         print str(w[0]) + ":" + str(w[1])
         c.connect("tcp://" + w[0] + ":" + w[1])
         c.setRDD(pickle_object)
-
-
 
     def create_RDD_worker_map(self):
         partition_map = {}

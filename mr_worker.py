@@ -5,13 +5,15 @@ import socket
 import gevent
 import operator
 from myRDD import RDD
+import StringIO
+import pickle
 
 class Worker(object):
     def __init__(self, master_addr, worker_ip, worker_port):
         self.master_addr = master_addr
         self.worker_port = worker_port
         self.worker_ip = worker_ip
-        self.rdd = RDD()
+        self.RDD = RDD()
         self.c = zerorpc.Client()
         self.c.connect("tcp://"+master_addr)
         self.c.register(worker_ip, worker_port)
@@ -39,6 +41,7 @@ class Worker(object):
     def getKeys(self, pipeID):
         while pipeID > self.getCurrentPipeID():
             gevent.sleep(1)
+
         rdd = self.getRDDByPipeID(pipeID)
         dic = {}
         for i in rdd.datalist:
@@ -49,15 +52,14 @@ class Worker(object):
         gevent.spawn(self.cal_async)
 
     def cal_async(self):
-        ret = self.rdd.calculate()
+        ret = self.RDD.calculate()
         print "res = ",ret
-        r = self.rdd
+        r = self.RDD
         while r != None:
-            print "data cached on rdd pipe"+str(r.pipeID)+": ", r.datalist
             r = r.prev
 
     def getRDDByPipeID(self,pipeID):
-        r = self.rdd
+        r = self.RDD
         while r!=None and r.pipeID == 0:
             r = r.prev
         if r == None or r.pipeID<pipeID: return None
@@ -67,36 +69,27 @@ class Worker(object):
 
 
     def getCurrentPipeID(self):
-        r = self.rdd
+        r = self.RDD
         while r!=None and r.pipeID == 0:
             r = r.prev
         if r == None: return 0
         else: return r.pipeID
 
+    def setRDD(self, RDD):
+        input = StringIO.StringIO(RDD)
+        unpickler = pickle.Unpickler(input)
+        self.RDD = unpickler.load()
+        # set current partition
+        self.RDD.set_worker_index_recv(worker_ip, worker_port)
+        print self.RDD.collect()
+
 if __name__ == '__main__':
     worker_ip = socket.gethostbyname(socket.gethostname())
     worker_port = sys.argv[1]
-    worker_index = sys.argv[2]
+
     master_addr = '127.0.0.1:4242'#sys.argv[2];
     w = Worker(master_addr,worker_ip,worker_port)
 
-    ##Initialize rdd (SHOULD BE DONE BY MASTER)
-    w.rdd = RDD()
-    w.rdd.isCached = True
-
-    w.rdd.workerlist[worker_ip+':8000'] = 1
-    w.rdd.workerlist[worker_ip+':8001'] = 2
-    if worker_index == str(1):
-        #w.rdd.datalist = ['a','xx','c']
-        w.rdd.workerIndex = 1
-    else:
-        #w.rdd.datalist = ['a','b']
-        w.rdd.workerIndex = 2
-
-    w.rdd.numPartition = 2
-    #w.rdd = w.rdd.map(lambda x:(x,1)).reduceByKey(operator.add)
-    w.rdd = w.rdd.TextFile('myfile').flatMap(lambda x:x.split()).map(lambda x:(x,1)).reduceByKey(operator.add)
-    ##################
     s = zerorpc.Server(w)
     s.bind('tcp://' + worker_ip+":"+worker_port)
     s.run()

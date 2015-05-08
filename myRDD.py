@@ -46,9 +46,7 @@ class RDD(object):
         self.datalist = []
         self.isCached = False
         self.runningID = 0
-
-    def getPartition(self):
-        return self.partition
+        self.input_filename = ""
 
     def getDataList(self):
         return self.datalist
@@ -112,9 +110,12 @@ class RDD(object):
                 remoteKeys = dic.keys()
             else:
                 c = zerorpc.Client()
+                print "connect to:" + str(w)
                 c.connect("tcp://"+w)
+
                 remoteKeys = c.getKeys(self.pipeID)######################### CALL WORKER.getKeys(), return [a,b..]
                 c.close()
+
             allKeys = self.__mergeKeys(allKeys,remoteKeys)
         return sorted(allKeys.keys())
 
@@ -226,6 +227,66 @@ class RDD(object):
         self.cacheInThisStep = True
         return self
 
+    """
+    this is used by master
+    It will re-init from backward:
+        1.numPartition
+        2.workerlist ([ip:port]->workerIndex)
+    """
+    def set_params_recv(self, workerlist):
+
+        current = self
+        num_partition = len(workerlist.keys())
+        # assgin to last one
+        current.numPartition = num_partition
+        current.workerlist = workerlist
+
+        # assign recursively
+        while True:
+            try:
+                current = current.prev
+                if current is not None:
+                    current.numPartition = num_partition
+                    current.workerlist = workerlist
+            except AttributeError:
+                break
+
+    """
+    this is used by worker
+    It will re-init from backward:
+        workerIndex: base on given [ip:port]
+    """
+    def set_worker_index_recv(self, ip, port):
+        workerIndex = self.workerlist[str(ip) + ":" + str(port)]
+        current = self
+        while True:
+            try:
+                current = current.prev
+                if current is not None:
+                    current.workerIndex = workerIndex
+            except AttributeError:
+                break
+
+    def get_ancester(self):
+
+        current = self
+        ancester_holder = current
+        while True:
+            try:
+                current = current.prev
+                if current is not None:
+                    ancester_holder = current
+            except AttributeError:
+                break
+        return ancester_holder
+
+    def set_input_filename(self, input_filename):
+        self.input_filename = input_filename
+
+    def get_input_filename(self):
+        print "get_input:" + str(self.input_filename)
+        return self.input_filename
+
 
 def test():
     #WordCount
@@ -244,5 +305,4 @@ if __name__ == '__main__':
     #rdd = rdd.reduceByKeyLocal(operator.add)
     #print "datalist =", rdd.getDataList()
     #print "result =", rdd.collectLocal()
-
 
