@@ -2,6 +2,7 @@ __author__ = 'pengzhan'
 import itertools
 import operator
 import zerorpc
+import gevent
 
 
 class RDD(object):
@@ -121,21 +122,31 @@ class RDD(object):
 
     def __getAllKeyValues(self,keys):
         keyValues = []
-        for w in self.workerlist:
-            if self.workerlist[w] == self.workerIndex:
-                for i in self.datalist:
-                    if i[0] in keys:
-                        keyValues.append(i)
-            else:
-                c = zerorpc.Client()
-                c.connect("tcp://"+w)
-                tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
+        done = False
+        while done is False:
+            for w in self.workerlist:
+                if self.workerlist[w] == self.workerIndex:
+                    for i in self.datalist:
+                        if i[0] in keys:
+                            keyValues.append(i)
+                else:
+                    try:
+                        c = zerorpc.Client()
+                        c.connect("tcp://"+w)
+                        tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
+                    except Exception:
+                        print "try again on: " + str(self.workerlist)
+                        keyValues = []
+                        break
+                    # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
+                    # [(a,1),(b,1)..] in the following step
+                    for i in tp:
+                        keyValues.append((i[0],i[1]))
+                    c.close()
+                    done = True
 
-                # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
-                # [(a,1),(b,1)..] in the following step
-                for i in tp:
-                    keyValues.append((i[0],i[1]))
-                c.close()
+            if done is False:
+                gevent.sleep(1)
         return keyValues
 
     #def __getAllKeysTEST(self):
@@ -234,7 +245,7 @@ class RDD(object):
         2.workerlist ([ip:port]->workerIndex)
     """
     def set_params_recv(self, workerlist):
-
+        print "start set params"
         current = self
         num_partition = len(workerlist.keys())
         # assgin to last one

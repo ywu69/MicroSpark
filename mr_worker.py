@@ -9,14 +9,15 @@ import StringIO
 import pickle
 
 class Worker(object):
-    def __init__(self, master_addr, worker_ip, worker_port):
+    def __init__(self, master_addr, worker_ip, worker_port, type):
         self.master_addr = master_addr
         self.worker_port = worker_port
         self.worker_ip = worker_ip
         self.RDD = RDD()
         self.c = zerorpc.Client()
         self.c.connect("tcp://"+master_addr)
-        self.c.register(worker_ip, worker_port)
+        self.c.register(worker_ip, worker_port, type)
+        self.results = ""
 
     def controller(self):
         while True:
@@ -25,8 +26,14 @@ class Worker(object):
 
 
     def ping(self):
-        #print('[Worker] Ping from Master')
+        print('[Worker] Ping from Master')
         pass
+
+    def update_RDD_workerlist(self, workerlist):
+        print "start update: " + str(workerlist)
+        self.RDD.set_params_recv(workerlist)
+        print "done"
+
 
     def getKeyValues(self, keys, pipeID):
         while pipeID > self.getCurrentPipeID():
@@ -75,20 +82,36 @@ class Worker(object):
         if r == None: return 0
         else: return r.pipeID
 
+
+
+
     def setRDD(self, RDD):
+        gevent.spawn(self.setRDD_async, RDD)
+
+    def setRDD_async(self, RDD):
+
+        self.c.set_worker_state(self.worker_ip, self.worker_port, 'WORKING')
+
         input = StringIO.StringIO(RDD)
         unpickler = pickle.Unpickler(input)
         self.RDD = unpickler.load()
         # set current partition
         self.RDD.set_worker_index_recv(worker_ip, worker_port)
-        print self.RDD.collect()
+        # collect
+        self.results = self.RDD.collect()
+        print self.results
+        self.c.set_worker_state(self.worker_ip, self.worker_port, 'FINISHED')
+
+    def getResults(self):
+        return self.results
 
 if __name__ == '__main__':
     worker_ip = socket.gethostbyname(socket.gethostname())
     worker_port = sys.argv[1]
+    type = sys.argv[2]
 
-    master_addr = '127.0.0.1:4242'#sys.argv[2];
-    w = Worker(master_addr,worker_ip,worker_port)
+    master_addr = sys.argv[3];
+    w = Worker(master_addr,worker_ip,worker_port, type)
 
     s = zerorpc.Server(w)
     s.bind('tcp://' + worker_ip+":"+worker_port)
