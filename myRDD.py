@@ -49,6 +49,8 @@ class RDD(object):
         self.runningID = 0
         self.input_filename = ""
 
+        self.hashBucket = []
+
     def getDataList(self):
         return self.datalist
 
@@ -126,16 +128,23 @@ class RDD(object):
         while done is False:
             for w in self.workerlist:
                 if self.workerlist[w] == self.workerIndex:
+                    dict = {}
                     for i in self.datalist:
-                        if i[0] in keys:
-                            keyValues.append(i)
+                        dict[i[0]] = i[1]
+
+                    for key in keys:
+                        if dict.get(key, None) is not None:
+                            keyValues.append((key, dict[key]))
+                    # for i in self.datalist:
+                    #     if i[0] in keys:
+                    #         keyValues.append(i)
                 else:
                     try:
                         c = zerorpc.Client()
                         c.connect("tcp://"+w)
                         tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
                     except Exception:
-                        print "try again on: " + str(self.workerlist)
+                        gevent.sleep(1)
                         keyValues = []
                         break
                     # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
@@ -159,9 +168,66 @@ class RDD(object):
     #            ret.append(i)
     #    return ret
 
-    def __groupByKey(self,iterator):
+
+
+    def __get_hash(self):
+        # init bucket
+        bucket = []
+        for i in range(0, len(self.workerlist)):
+            bucket.append([])
+
+        for i in self.datalist:
+            bucket[hash(i[0]) % len(self.workerlist)].append(i[0])
+        return bucket
+
+    def __groupByKey_hash(self,iterator):
         #print "current pipe=",self.pipeID
         #print "prev res = ",iterator
+        self.datalist = iterator
+        self.isCached = True
+        keyValues = []
+
+        self.hashBucket = self.__get_hash()
+
+        for i in range(0, len(self.hashBucket)):
+            print str(len(self.hashBucket[i])),
+        print
+
+        for w in self.workerlist:
+            if str(self.workerlist[w]) == str(self.workerIndex):
+                keys = self.hashBucket[self.workerIndex-1]
+
+                # optimize Time: O(n)  Extra Space
+                dict = {}
+                for i in self.datalist:
+                    dict[i[0]] = i[1]
+
+                for key in keys:
+                    if dict[key] is not None:
+                        keyValues.append((key, dict[key]))
+            else:
+
+                c = zerorpc.Client()
+                c.connect("tcp://"+w)
+                tp = c.getKeyValuesByHash(self.pipeID, self.workerIndex)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
+                # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
+                # [(a,1),(b,1)..] in the following step
+                for i in tp:
+                    keyValues.append((i[0],i[1]))
+                c.close()
+                print "current KeyValues:" + str(keyValues)
+
+        dic = {}
+        for x in keyValues:
+            if isinstance(x,tuple):
+                dic[x[0]] = []
+        for x in keyValues:
+            if not isinstance(x[1],list):
+                x = (x[0],[x[1]])
+            dic[x[0]].extend(x[1])
+        return map(lambda x:(x,dic[x]),dic)
+
+    def __groupByKey(self,iterator):
         self.datalist = iterator
         self.isCached = True
         print "auto cache"
@@ -169,7 +235,7 @@ class RDD(object):
         keysIneed = []
         size = len(allKeys)/self.getPartitionNum()
         indexCnt = 1
-        cnt = 0;
+        cnt = 0
         for k in allKeys:
             cnt += 1
             if indexCnt == self.workerIndex:
@@ -177,9 +243,7 @@ class RDD(object):
             if cnt >= size and indexCnt<self.getPartitionNum():
                 cnt = 0
                 indexCnt += 1
-        #print "keysIneed = ",keysIneed
         keyValuesIneed = self.__getAllKeyValues(keysIneed)
-        #print "keyValuesIneed = ",keyValuesIneed
         dic = {}
         for x in keyValuesIneed:
             if isinstance(x,tuple):
@@ -206,6 +270,23 @@ class RDD(object):
                 ret.append((i[0],reduce(f,i[1])))
             return ret
         return RDD(self,func)
+
+    def groupByKey_Hash(self):
+        #>>> x = sc.parallelize([("a", 1), ("b", 1), ("a", 1)])
+        #>>> map((lambda (x,y): (x, list(y))), sorted(x.groupByKey().collect()))
+        #[('a', [1, 1]), ('b', [1])]
+        def func(iterator):
+            return self.__groupByKey_hash(iterator)
+        return RDD(self,func)
+
+    def reduceByKey_Hash(self,f):
+        def func(iterator):
+            ret = []
+            tplist = self.__groupByKey_hash(iterator)
+            for i in tplist:
+                ret.append((i[0],reduce(f,i[1])))
+            return ret
+        return RDD(self,func)
     #############################
 
     # join() : (RDD[(K, V)], RDD[(K, W)]) -> RDD[(K, (V, W))]
@@ -225,9 +306,9 @@ class RDD(object):
             cnt = 0
             index = 1
             for l in lines:
-                if cnt >= size*(self.workerIndex-1) and cnt < self.workerIndex:
+                if cnt >= size*(self.workerIndex-1) and cnt < size * self.workerIndex:
                     ret.append(l)
-                elif cnt>=self.workerIndex and self.workerIndex == self.numPartition:
+                elif cnt>=size*self.workerIndex and self.workerIndex == self.numPartition:
                     ret.append(l)
                 cnt += 1
             f.close()

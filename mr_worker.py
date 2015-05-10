@@ -31,18 +31,56 @@ class Worker(object):
 
     def update_RDD_workerlist(self, workerlist):
         print "start update: " + str(workerlist)
-        self.RDD.set_params_recv(workerlist)
+        try:
+            self.RDD.set_params_recv(workerlist)
+        except Exception:
+            print "########### fail to update workerlist, try again later"
         print "done"
-
 
     def getKeyValues(self, keys, pipeID):
         while pipeID > self.getCurrentPipeID():
             gevent.sleep(1)
         rdd = self.getRDDByPipeID(pipeID)
         ret = []
+        dict = {}
         for i in rdd.datalist:
-            if i[0] in keys:
-                ret.append(i)
+            dict[i[0]] = i[1]
+
+        for key in keys:
+            if dict.get(key, None) is not None:
+                ret.append((key, dict[key]))
+        # for i in rdd.datalist:
+        #     if i[0] in keys:
+        #         ret.append(i)
+        return ret
+
+    def __get_hash(self, pipeID):
+
+        while pipeID > self.getCurrentPipeID():
+            gevent.sleep(1)
+        rdd = self.getRDDByPipeID(pipeID)
+
+        while len(rdd.hashBucket) == 0:
+            gevent.sleep(0.1)
+        return rdd.hashBucket
+
+    def getKeyValuesByHash(self, pipeID, remote_worker_index):
+
+        while pipeID > self.getCurrentPipeID():
+            gevent.sleep(1)
+        rdd = self.getRDDByPipeID(pipeID)
+
+        bucket = rdd.hashBucket
+        keys = bucket[remote_worker_index-1]
+        ret = []
+
+        dict = {}
+        for i in rdd.datalist:
+            dict[i[0]] = i[1]
+
+        for key in keys:
+            if dict[key] is not None:
+                ret.append((key, dict[key]))
         return ret
 
     def getKeys(self, pipeID):
@@ -89,6 +127,8 @@ class Worker(object):
         gevent.spawn(self.setRDD_async, RDD)
 
     def setRDD_async(self, RDD):
+        self.results = ""
+        self.RDD = ""
 
         self.c.set_worker_state(self.worker_ip, self.worker_port, 'WORKING')
 
@@ -99,10 +139,11 @@ class Worker(object):
         self.RDD.set_worker_index_recv(worker_ip, worker_port)
         # collect
         self.results = self.RDD.collect()
-        print self.results
+        print "My results:" + str(self.results)
         self.c.set_worker_state(self.worker_ip, self.worker_port, 'FINISHED')
 
     def getResults(self):
+        self.c.set_worker_state(self.worker_ip, self.worker_port, 'READY')
         return self.results
 
 if __name__ == '__main__':

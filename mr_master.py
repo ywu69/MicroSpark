@@ -37,8 +37,10 @@ class Master(object):
             for w in self.workers:
                 print "Worker_Nomal: ",
                 print '(%s,%s,%s)' % (w[0], w[1], self.workerState[w]),
+            print
             for w in self.workers_standby:
-                print 'Worker_Standby: (%s,%s,%s)' % (w[0], w[1], self.workerState[w])
+                print 'Worker_Standby: (%s,%s,%s)' % (w[0], w[1], self.workerState[w]),
+
             print
             gevent.sleep(1)
 
