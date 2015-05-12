@@ -3,10 +3,13 @@ import itertools
 import operator
 import zerorpc
 import gevent
+import params
+import StringIO
+import cloudpickle
 
 
 class RDD(object):
-    def __init__(self, prev=None, func=None):
+    def __init__(self, prev=None, func=None, master_address=None):
         self.pipeID = 0 #record running steps.
         self.cacheInThisStep = False
         if not isinstance(prev, RDD):
@@ -25,6 +28,7 @@ class RDD(object):
             self.numPartition = 1
             self.workerlist = {}
             self.workerIndex = 1
+            self.master_address = master_address
         else:
             self.prev = prev
             prev_func = prev.func
@@ -44,6 +48,7 @@ class RDD(object):
             self.numPartition = prev.numPartition
             self.workerlist = prev.workerlist #a map of ( (ip,port) -> index)
             self.workerIndex = prev.workerIndex
+            self.master_address = prev.master_address
         self.datalist = []
         self.isCached = False
         self.runningID = 0
@@ -63,15 +68,43 @@ class RDD(object):
     def calculate(self):
         return self.func([])
 
-    def collect(self):
+    def collect_local(self):
         return self.calculate()
-        pass
+
+    def collect(self):
         #1. send serialized RDD to each worker
-
         #2. worker do the calculation
-
         #3. collect all results
+        output = StringIO.StringIO()
+        pickler = cloudpickle.CloudPickler(output)
+        pickler.dump(self)#rdd
+        pickle_object = output.getvalue()
 
+        # if self.if_context is params.NO_CONTEXT:
+        #     master_addr = self.master_address
+        # elif self.if_context is params.USE_CONTEXT:
+        #     master_addr = Context().getMasterAddress()
+        # else:
+        #     return "Unknown Type:" + str(self.if_context)
+        #
+        master_addr = self.master_address
+
+        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+        c.connect("tcp://"+master_addr)
+        c.set_job(pickle_object)
+
+        worker_ips = c.result_is_ready()
+
+        print "####worker_ips for collect: " + str(worker_ips)
+
+        final_results = []
+        for w in worker_ips:
+            c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+            c.connect("tcp://"+w)
+            final_results += c.getResults()
+        return final_results
+
+    # not used
     def collectLocal(self):
         if self.func is None:
             return self.getDataList()
@@ -112,7 +145,7 @@ class RDD(object):
                     dic[i[0]] = 1
                 remoteKeys = dic.keys()
             else:
-                c = zerorpc.Client(timeout=50)
+                c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
                 print "connect to:" + str(w)
                 c.connect("tcp://"+w)
 
@@ -141,14 +174,14 @@ class RDD(object):
                     #         keyValues.append(i)
                     # print str(dict)
                 else:
-                    # try:
-                    c = zerorpc.Client(timeout=50)
-                    c.connect("tcp://"+w)
-                    tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
-                    # except Exception:
-                    #     gevent.sleep(1)
-                    #     keyValues = []
-                    #     break
+                    try:
+                        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+                        c.connect("tcp://"+w)
+                        tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
+                    except Exception:
+                        gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
+                        keyValues = []
+                        break
                     # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
                     # [(a,1),(b,1)..] in the following step
                     for i in tp:
@@ -157,7 +190,7 @@ class RDD(object):
                     done = True
 
             if done is False:
-                gevent.sleep(1)
+                gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
         return keyValues
 
     #def __getAllKeysTEST(self):
@@ -210,7 +243,7 @@ class RDD(object):
                         keyValues.append((i[0], i[1]))
             else:
 
-                c = zerorpc.Client(timeout=50)
+                c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
                 c.connect("tcp://"+w)
                 tp = c.getKeyValuesByHash(self.pipeID, self.workerIndex)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
                 # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
@@ -382,22 +415,10 @@ class RDD(object):
         print "get_input:" + str(self.input_filename)
         return self.input_filename
 
+    def set_master_address(self, master_address, type):
+        self.master_address = master_address
+        self.if_context = type
+    def get_master_address(self):
+        self.master_address
 
-def test():
-    #WordCount
-    pass
-
-if __name__ == '__main__':
-    rdd = RDD()
-    rdd.workerIndex = 2
-    rdd.numPartition = 2
-    rdd = rdd.TextFile('myfile')
-    rdd = rdd.groupByKey()
-    print rdd.collect()
-    #print p.getPartitionByCondition(lambda x:x>=2, [1,2,3])
-    #rdd = RDD(None,None,False,p)
-    #rdd = rdd.map(lambda x:(x,1))#.groupByKeyLocal()
-    #rdd = rdd.reduceByKeyLocal(operator.add)
-    #print "datalist =", rdd.getDataList()
-    #print "result =", rdd.collectLocal()
 

@@ -7,6 +7,7 @@ import operator
 from myRDD import RDD
 import StringIO
 import pickle
+import params
 
 class Worker(object):
     def __init__(self, master_addr, worker_ip, worker_port, type):
@@ -14,7 +15,7 @@ class Worker(object):
         self.worker_port = worker_port
         self.worker_ip = worker_ip
         self.RDD = RDD()
-        self.c = zerorpc.Client(timeout=50)
+        self.c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
         self.c.connect("tcp://"+master_addr)
         self.c.register(worker_ip, worker_port, type)
         self.results = ""
@@ -22,7 +23,7 @@ class Worker(object):
     def controller(self):
         while True:
             print('[Worker]')
-            gevent.sleep(1)
+            gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
 
 
     def ping(self):
@@ -39,7 +40,7 @@ class Worker(object):
 
     def getKeyValues(self, keys, pipeID):
         while pipeID > self.getCurrentPipeID():
-            gevent.sleep(1)
+            gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
         rdd = self.getRDDByPipeID(pipeID)
         ret = []
         dict = {}
@@ -58,17 +59,17 @@ class Worker(object):
     def __get_hash(self, pipeID):
 
         while pipeID > self.getCurrentPipeID():
-            gevent.sleep(1)
+            gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
         rdd = self.getRDDByPipeID(pipeID)
 
         while len(rdd.hashBucket) == 0:
-            gevent.sleep(0.1)
+            gevent.sleep(params.SLEEP_INTERVAL_SHORT)
         return rdd.hashBucket
 
     def getKeyValuesByHash(self, pipeID, remote_worker_index):
 
         while pipeID > self.getCurrentPipeID():
-            gevent.sleep(1)
+            gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
         rdd = self.getRDDByPipeID(pipeID)
 
         bucket = rdd.hashBucket
@@ -87,7 +88,7 @@ class Worker(object):
 
     def getKeys(self, pipeID):
         while pipeID > self.getCurrentPipeID():
-            gevent.sleep(1)
+            gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
 
         rdd = self.getRDDByPipeID(pipeID)
         dic = {}
@@ -138,9 +139,9 @@ class Worker(object):
         unpickler = pickle.Unpickler(input)
         self.RDD = unpickler.load()
         # set current partition
-        self.RDD.set_worker_index_recv(worker_ip, worker_port)
+        self.RDD.set_worker_index_recv(self.worker_ip, self.worker_port)
         # collect
-        self.results = self.RDD.collect()
+        self.results = self.RDD.collect_local()
         # print "My results:" + str(self.results)
         self.c.set_worker_state(self.worker_ip, self.worker_port, 'FINISHED')
 
