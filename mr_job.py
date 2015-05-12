@@ -5,32 +5,40 @@ import sys
 from myRDD import *
 import StringIO
 import cloudpickle
+from datetime import datetime
 
 
 if __name__ == '__main__':
-    input_filename = sys.argv[1]
-    master_addr = sys.argv[2]
-    c = zerorpc.Client(timeout=50)
-    c.connect("tcp://"+master_addr)
-    R = RDD()
-    rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
-    #rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
+    n = 1
+    start = datetime.now()
+    for i in range(0, n):
+        input_filename = sys.argv[1]
+        master_addr = sys.argv[2]
+        c = zerorpc.Client(timeout=50)
+        c.connect("tcp://"+master_addr)
+        R = RDD()
+        # rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
+        rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
 
-    output = StringIO.StringIO()
-    pickler = cloudpickle.CloudPickler(output)
-    pickler.dump(rdd)
-    pickle_object = output.getvalue()
-
-    c.set_job(pickle_object)
+        output = StringIO.StringIO()
+        pickler = cloudpickle.CloudPickler(output)
+        pickler.dump(rdd)
+        pickle_object = output.getvalue()
 
 
-    worker_ips = c.result_is_ready()
+        c.set_job(pickle_object)
 
-    print "####worker_ips: " + str(worker_ips)
 
-    final_results = []
-    for w in worker_ips:
-        c = zerorpc.Client()
-        c.connect("tcp://"+w)
-        final_results += c.getResults()
-    print final_results
+        worker_ips = c.result_is_ready()
+
+        print "####worker_ips: " + str(worker_ips)
+
+        final_results = []
+        for w in worker_ips:
+            c = zerorpc.Client()
+            c.connect("tcp://"+w)
+            final_results += c.getResults()
+        # print final_results
+    end = datetime.now()
+    time = (end - start).total_seconds() / n
+    print str(time)

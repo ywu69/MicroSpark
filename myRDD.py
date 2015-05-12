@@ -112,7 +112,7 @@ class RDD(object):
                     dic[i[0]] = 1
                 remoteKeys = dic.keys()
             else:
-                c = zerorpc.Client()
+                c = zerorpc.Client(timeout=50)
                 print "connect to:" + str(w)
                 c.connect("tcp://"+w)
 
@@ -129,24 +129,26 @@ class RDD(object):
             for w in self.workerlist:
                 if self.workerlist[w] == self.workerIndex:
                     dict = {}
-                    for i in self.datalist:
-                        dict[i[0]] = i[1]
 
                     for key in keys:
-                        if dict.get(key, None) is not None:
-                            keyValues.append((key, dict[key]))
+                        dict[key] = 1
+
+                    for i in self.datalist:
+                        if dict.get(i[0], None) is not None:
+                            keyValues.append(i)
                     # for i in self.datalist:
                     #     if i[0] in keys:
                     #         keyValues.append(i)
+                    # print str(dict)
                 else:
-                    try:
-                        c = zerorpc.Client()
-                        c.connect("tcp://"+w)
-                        tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
-                    except Exception:
-                        gevent.sleep(1)
-                        keyValues = []
-                        break
+                    # try:
+                    c = zerorpc.Client(timeout=50)
+                    c.connect("tcp://"+w)
+                    tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
+                    # except Exception:
+                    #     gevent.sleep(1)
+                    #     keyValues = []
+                    #     break
                     # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
                     # [(a,1),(b,1)..] in the following step
                     for i in tp:
@@ -199,15 +201,16 @@ class RDD(object):
 
                 # optimize Time: O(n)  Extra Space
                 dict = {}
-                for i in self.datalist:
-                    dict[i[0]] = i[1]
 
                 for key in keys:
-                    if dict[key] is not None:
-                        keyValues.append((key, dict[key]))
+                    dict[key] =[]
+
+                for i in self.datalist:
+                    if dict.get(i[0], None) is not None:
+                        keyValues.append((i[0], i[1]))
             else:
 
-                c = zerorpc.Client()
+                c = zerorpc.Client(timeout=50)
                 c.connect("tcp://"+w)
                 tp = c.getKeyValuesByHash(self.pipeID, self.workerIndex)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
                 # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to
@@ -215,7 +218,7 @@ class RDD(object):
                 for i in tp:
                     keyValues.append((i[0],i[1]))
                 c.close()
-                print "current KeyValues:" + str(keyValues)
+                # print "current KeyValues:" + str(keyValues)
 
         dic = {}
         for x in keyValues:

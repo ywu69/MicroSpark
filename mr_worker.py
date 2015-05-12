@@ -14,7 +14,7 @@ class Worker(object):
         self.worker_port = worker_port
         self.worker_ip = worker_ip
         self.RDD = RDD()
-        self.c = zerorpc.Client()
+        self.c = zerorpc.Client(timeout=50)
         self.c.connect("tcp://"+master_addr)
         self.c.register(worker_ip, worker_port, type)
         self.results = ""
@@ -43,12 +43,13 @@ class Worker(object):
         rdd = self.getRDDByPipeID(pipeID)
         ret = []
         dict = {}
-        for i in rdd.datalist:
-            dict[i[0]] = i[1]
 
         for key in keys:
-            if dict.get(key, None) is not None:
-                ret.append((key, dict[key]))
+            dict[key] = 1
+
+        for i in rdd.datalist:
+            if dict.get(i[0], None) is not None:
+                ret.append(i)
         # for i in rdd.datalist:
         #     if i[0] in keys:
         #         ret.append(i)
@@ -75,12 +76,13 @@ class Worker(object):
         ret = []
 
         dict = {}
-        for i in rdd.datalist:
-            dict[i[0]] = i[1]
 
         for key in keys:
-            if dict[key] is not None:
-                ret.append((key, dict[key]))
+            dict[key] =[]
+
+        for i in rdd.datalist:
+            if dict.get(i[0], None) is not None:
+                ret.append((i[0], i[1]))
         return ret
 
     def getKeys(self, pipeID):
@@ -139,7 +141,7 @@ class Worker(object):
         self.RDD.set_worker_index_recv(worker_ip, worker_port)
         # collect
         self.results = self.RDD.collect()
-        print "My results:" + str(self.results)
+        # print "My results:" + str(self.results)
         self.c.set_worker_state(self.worker_ip, self.worker_port, 'FINISHED')
 
     def getResults(self):
