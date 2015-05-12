@@ -98,10 +98,18 @@ class RDD(object):
         print "####worker_ips for collect: " + str(worker_ips)
 
         final_results = []
+
         for w in worker_ips:
             c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
             c.connect("tcp://"+w)
-            final_results += c.getResults()
+
+            result = c.getResults()
+            if isinstance(result, int):
+                if isinstance(final_results, list):
+                    final_results = 0
+                final_results += int(result)
+            else:
+                final_results += result
         return final_results
 
     # not used
@@ -126,6 +134,11 @@ class RDD(object):
     def flatMap(self, f):
         def func(iterator):
             return list(itertools.chain.from_iterable(map(f, iterator)))
+        return RDD(self,func)
+
+    def count(self):
+        def func(iterator):
+            return len(iterator)
         return RDD(self,func)
 
 
