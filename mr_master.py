@@ -126,7 +126,7 @@ class Master(object):
             self.workers_standby[(ip,port)] = c
             print "add: "+ str(self.workers_standby)
         self.workerState[(ip,port)] = 'READY'
-        gevent.spawn(self.ping_worker,(ip,port), type)
+        #gevent.spawn(self.ping_worker,(ip,port), type)
 
         # #####---ONLY FOR TESTING---########
         # if len(self.workers) == 2:

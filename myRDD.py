@@ -93,7 +93,13 @@ class RDD(object):
         c.connect("tcp://"+master_addr)
         c.set_job(pickle_object)
 
-        worker_ips = c.result_is_ready()
+        worker_ips = None
+        while worker_ips is None:
+            try:
+                worker_ips = c.result_is_ready()
+            except Exception:
+                gevent.sleep(1)
+
 
         print "####worker_ips for collect: " + str(worker_ips)
 
