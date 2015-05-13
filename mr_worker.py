@@ -38,6 +38,14 @@ class Worker(object):
             print "########### fail to update workerlist, try again later"
         print "done"
 
+    def thread_worker(self):
+        try:
+            print "I am threatening"
+            self.c.set_worker_state(self.worker_ip, self.worker_port, 'THREATENING')
+        except Exception:
+            print "########### fail to threaten workerlist, try again later"
+        print "done"
+
     def getKeyValues(self, keys, pipeID):
         while pipeID > self.getCurrentPipeID():
             gevent.sleep(params.SLEEP_INTERVAL_GENERAL)

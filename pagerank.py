@@ -44,7 +44,7 @@ if __name__ == '__main__':
         # Calculates URL contributions to the rank of other URLs.
         contribs = links.join(ranks).flatMap(
             lambda url_urls_rank: computeContribs(url_urls_rank[1][0], url_urls_rank[1][1]))
-        print contribs.calculate()
+        #print contribs.calculate()
         # Re-calculates URL ranks based on neighbor contributions.
         ranks = contribs.reduceByKey(operator.add).mapValues(lambda rank: rank * 0.85 + 0.15)
 

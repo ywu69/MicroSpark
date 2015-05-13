@@ -100,6 +100,7 @@ class Master(object):
                             Master may need to cancel the job, and let driver knows
                             """
                             print "########################## should shut down"
+                            self.broadcast_threatening()
                             pass
                         print "new workers:" + str(self.workers)
                         print "standby: " + str(self.workers_standby)
@@ -114,6 +115,13 @@ class Master(object):
             else:
                 break
             gevent.sleep(1)
+
+    def broadcast_threatening(self):
+        print "try to broadcast threading across workerlists on :" +str(self.workers)
+        for w in self.workers:
+            c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+            c.connect("tcp://" + w[0] + ":" + w[1])
+            c.thread_worker()
 
     def register_async(self, ip, port, type):
         print '[Master:%s] ' % self.state,
@@ -219,7 +227,10 @@ class Master(object):
             c.update_RDD_workerlist(self.workerlist_for_RDD)
 
     def set_worker_state(self, ip, port, state):
-        gevent.spawn(self.set_worker_state_async, ip, port, state)
+        if self.workerState[str(ip), str(port)] is not "THREATENING":
+            gevent.spawn(self.set_worker_state_async, ip, port, state)
+        else:
+            print "$$$$$$$$$$$$$$$$$$"
 
     def set_worker_state_async(self, ip, port, state):
         print 'set' + ip + ':' + port + ' state ' + state
@@ -233,6 +244,8 @@ class Master(object):
                 if self.workerState[w] == "FINISHED":
                     print str(w) + " is finished"
                     count += 1
+                if self.workerState[w] == "THREATENING":
+                    return None
                 else:
                     break
 

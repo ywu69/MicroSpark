@@ -101,18 +101,24 @@ class RDD(object):
 
         final_results = []
 
-        for w in worker_ips:
-            c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
-            c.connect("tcp://"+w)
+        if worker_ips is None:
+            print "#############################################"
+            print "Insufficient worker(s) to finish partitions "
+            print "#############################################"
+            return None
+        else:
+            for w in worker_ips:
+                c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+                c.connect("tcp://"+w)
 
-            result = c.getResults()
-            if isinstance(result, int):
-                if isinstance(final_results, list):
-                    final_results = 0
-                final_results += int(result)
-            else:
-                final_results += result
-        return final_results
+                result = c.getResults()
+                if isinstance(result, int):
+                    if isinstance(final_results, list):
+                        final_results = 0
+                    final_results += int(result)
+                else:
+                    final_results += result
+            return final_results
 
     # not used
     def collectLocal(self):
