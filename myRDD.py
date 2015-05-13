@@ -6,6 +6,8 @@ import gevent
 import params
 import StringIO
 import cloudpickle
+import copy
+import sys
 
 
 class RDD(object):
@@ -443,9 +445,11 @@ class RDD(object):
         return ancester_holder
 
     def join(self,rdd):
+
         #judge if same workerindex#
         #End Judge#
         def func(iterator):
+            rdd_copy = copy.deepcopy(rdd)
             dic = {}
             for i in iterator:
                 dic[i[0]] = None
@@ -454,7 +458,7 @@ class RDD(object):
                     dic[i[0]] = [i[1]]
                 else:
                     dic[i[0]] = dic[i[0]].append(i[1])
-            lstofrdd = rdd.calculate()
+            lstofrdd = rdd_copy.calculate()
             print "dic = ",dic
             print "rdd = ",lstofrdd
             for i in lstofrdd:
@@ -481,34 +485,34 @@ class RDD(object):
     def get_master_address(self):
         self.master_address
 
-import re
-
-def computeContribs(urls, rank):
-    """Calculates URL contributions to the rank of other URLs."""
-    num_urls = len(urls)
-    for url in urls:
-        yield (url, rank / num_urls)
-
-def parseNeighbors(urls):
-    """Parses a urls pair string into urls pair."""
-    parts = re.split(r'\s+', urls)
-    l =len(parts)
-    ls = []
-    for i in range(l):
-        if i == 0 or parts[i].strip() == '':
-            continue
-        else:
-            ls.append(parts[i])
-    return parts[0], ls
+# import re
+#
+# def computeContribs(urls, rank):
+#     """Calculates URL contributions to the rank of other URLs."""
+#     num_urls = len(urls)
+#     for url in urls:
+#         yield (url, rank / num_urls)
+#
+# def parseNeighbors(urls):
+#     """Parses a urls pair string into urls pair."""
+#     parts = re.split(r'\s+', urls)
+#     l =len(parts)
+#     ls = []
+#     for i in range(l):
+#         if i == 0 or parts[i].strip() == '':
+#             continue
+#         else:
+#             ls.append(parts[i])
+#     return parts[0], ls
 
 if __name__ == '__main__':
     rdd = RDD()
-    rdd.workerlist ={"127.0.0.1:8000":1}
-    rdd.workerIndex = 1
+    rdd.workerlist ={"127.0.0.1:10000":1, "127.0.0.1:10001":2}
+    rdd.workerIndex = int(sys.argv[1])
     links = rdd.TextFile("pagerank").map(lambda urls: parseNeighbors(urls)).cache()
     ranks = links.map(lambda url_neighbors: (url_neighbors[0], 1.0))
 
-    for iteration in range(5):
+    for iteration in range(1):
         # Calculates URL contributions to the rank of other URLs.
         contribs = links.join(ranks).flatMap(
             lambda url_urls_rank: computeContribs(url_urls_rank[1][0], url_urls_rank[1][1]))
