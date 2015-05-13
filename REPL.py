@@ -85,8 +85,8 @@ def func():
     C = Context()
     #R = C.init()
     R = RDD(None, None, C.getMasterAddress())
-    rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/inputfile4.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b).count()
-    rdd.collect()
+    # rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/inputfile4.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
+    # # rdd.collect()
 
 
     keyboard()

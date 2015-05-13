@@ -124,6 +124,13 @@ class RDD(object):
             return map(f, iterator)
         return RDD(self, func)
 
+    # help me check on this
+    def mapValues(self, f):
+        def func(iterator):
+            map_values_fn = lambda kv: (kv[0], f(kv[1]))
+            return map(map_values_fn, iterator)
+        return RDD(self, func)
+
     # filter(f:T->Bool) : RDD[T] -> RDD[T]
     def filter(self,f):
         def func(iterator):
@@ -136,10 +143,24 @@ class RDD(object):
             return list(itertools.chain.from_iterable(map(f, iterator)))
         return RDD(self,func)
 
+    # help me check on this
     def count(self):
         def func(iterator):
             return len(iterator)
         return RDD(self,func)
+
+    def distinct(self):
+        pass
+        #
+        # return
+        #
+        #
+        # def func(iterator):
+        #     return self.map(lambda x: (x, None)).\
+        #         reduceByKey(lambda x, _: x).\
+        #         map(lambda x: x[0])
+        # return RDD(self,func)
+
 
 
     ##########################################
