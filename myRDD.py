@@ -221,7 +221,7 @@ class RDD(object):
                     for i in tp:
                         keyValues.append((i[0],i[1]))
                     c.close()
-                    done = True
+            done = True
 
             if done is False:
                 gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
@@ -442,6 +442,32 @@ class RDD(object):
                 break
         return ancester_holder
 
+    def join(self,rdd):
+        #judge if same workerindex#
+        #End Judge#
+        def func(iterator):
+            dic = {}
+            for i in iterator:
+                dic[i[0]] = None
+            for i in iterator:
+                if dic[i[0]] is None:
+                    dic[i[0]] = [i[1]]
+                else:
+                    dic[i[0]] = dic[i[0]].append(i[1])
+            lstofrdd = rdd.calculate()
+            print "dic = ",dic
+            print "rdd = ",lstofrdd
+            for i in lstofrdd:
+                dic[i[0]].extend([i[1]])
+
+            ret = []
+            for i in dic:
+                print i,dic[i]
+                ret.append((i,dic[i]))
+            print "ret = ",ret
+            return ret
+        return RDD(self,func)
+
     def set_input_filename(self, input_filename):
         self.input_filename = input_filename
 
@@ -455,4 +481,42 @@ class RDD(object):
     def get_master_address(self):
         self.master_address
 
+import re
 
+def computeContribs(urls, rank):
+    """Calculates URL contributions to the rank of other URLs."""
+    num_urls = len(urls)
+    for url in urls:
+        yield (url, rank / num_urls)
+
+def parseNeighbors(urls):
+    """Parses a urls pair string into urls pair."""
+    parts = re.split(r'\s+', urls)
+    l =len(parts)
+    ls = []
+    for i in range(l):
+        if i == 0 or parts[i].strip() == '':
+            continue
+        else:
+            ls.append(parts[i])
+    return parts[0], ls
+
+if __name__ == '__main__':
+    rdd = RDD()
+    rdd.workerlist ={"127.0.0.1:8000":1}
+    rdd.workerIndex = 1
+    links = rdd.TextFile("pagerank").map(lambda urls: parseNeighbors(urls)).cache()
+    ranks = links.map(lambda url_neighbors: (url_neighbors[0], 1.0))
+
+    for iteration in range(5):
+        # Calculates URL contributions to the rank of other URLs.
+        contribs = links.join(ranks).flatMap(
+            lambda url_urls_rank: computeContribs(url_urls_rank[1][0], url_urls_rank[1][1]))
+        print contribs.calculate()
+        # Re-calculates URL ranks based on neighbor contributions.
+        ranks = contribs.reduceByKey(operator.add).mapValues(lambda rank: rank * 0.85 + 0.15)
+
+    # Collects all URL ranks and dump them to console.
+    res = ranks.calculate()
+    for (link, rank) in res:
+        print("%s has rank: %s." % (link, rank/len(res)))
