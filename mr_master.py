@@ -5,7 +5,6 @@ import zerorpc
 import os
 import gevent
 import socket
-from gevent import timeout
 import StringIO
 import pickle
 import cloudpickle
@@ -118,7 +117,7 @@ class Master(object):
     def register_async(self, ip, port, type):
         print '[Master:%s] ' % self.state,
         print 'Registered worker (%s,%s,%s)' % (ip, port, str(type))
-        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+        c = zerorpc.Client(timeout=60)
         print "Type: " + str(type)
         c.connect("tcp://" + ip + ':' + port)
         if type == WORKER_NORMAL:
@@ -197,7 +196,7 @@ class Master(object):
         gevent.spawn(self.assign_rdd_to_worker_async, w, pickle_object)
 
     def assign_rdd_to_worker_async(self, w, pickle_object):
-        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+        c = zerorpc.Client(timeout=60)
         print str(w[0]) + ":" + str(w[1])
         c.connect("tcp://" + w[0] + ":" + w[1])
         c.setRDD(pickle_object)
@@ -213,7 +212,7 @@ class Master(object):
     def update_RDD_workerlists(self):
         print "try to update workerlists on :" +str(self.workers)
         for w in self.workers:
-            c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+            c = zerorpc.Client(timeout=60)
             c.connect("tcp://" + w[0] + ":" + w[1])
             print "update_RDD_workerlists: connected to " + str(w[0]) + ":" + str(w[1])
             c.update_RDD_workerlist(self.workerlist_for_RDD)

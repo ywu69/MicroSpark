@@ -29,8 +29,8 @@ class Context(object):
         self.create_worker("0.0.0.0", "10000", "1")
         self.create_worker("0.0.0.0", "10001", "1")
         self.create_worker("0.0.0.0", "10002", "1")
-        self.create_worker("0.0.0.0", "10003", "1")
-        self.create_worker("0.0.0.0", "10004", "1")
+        #self.create_worker("0.0.0.0", "10003", "1")
+        #self.create_worker("0.0.0.0", "10004", "1")
         return RDD(None, None, self.getMasterAddress())
 
     def create_master(self):
