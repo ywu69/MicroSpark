@@ -244,10 +244,11 @@ class Master(object):
                 if self.workerState[w] == "FINISHED":
                     print str(w) + " is finished"
                     count += 1
-                if self.workerState[w] == "THREATENING":
-                    return None
+                elif self.workerState[w] == "THREATENING":
+                     return None
                 else:
                     break
+            print "@@@@how many are finished?  " + str(count)
 
             if count == len(self.workers):
                 print "#######################"
