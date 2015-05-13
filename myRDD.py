@@ -89,7 +89,7 @@ class RDD(object):
         #
         master_addr = self.master_address
 
-        c = zerorpc.Client(timeout=60)
+        c = zerorpc.Client(timeout=500)
         c.connect("tcp://"+master_addr)
         c.set_job(pickle_object)
 
@@ -100,7 +100,7 @@ class RDD(object):
         final_results = []
 
         for w in worker_ips:
-            c = zerorpc.Client(timeout=60)
+            c = zerorpc.Client(timeout=500)
             c.connect("tcp://"+w)
 
             result = c.getResults()
@@ -185,7 +185,7 @@ class RDD(object):
                     dic[i[0]] = 1
                 remoteKeys = dic.keys()
             else:
-                c = zerorpc.Client(timeout=60)
+                c = zerorpc.Client(timeout=500)
                 print "connect to:" + str(w)
                 c.connect("tcp://"+w)
 
@@ -215,7 +215,7 @@ class RDD(object):
                     # print str(dict)
                 else:
                     try:
-                        c = zerorpc.Client(timeout=60)
+                        c = zerorpc.Client(timeout=500)
                         c.connect("tcp://"+w)
                         tp = c.getKeyValues(keys,self.pipeID)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
                     except Exception:
@@ -283,7 +283,7 @@ class RDD(object):
                         keyValues.append((i[0], i[1]))
             else:
 
-                c = zerorpc.Client(timeout=60)
+                c = zerorpc.Client(timeout=500)
                 c.connect("tcp://"+w)
                 tp = c.getKeyValuesByHash(self.pipeID, self.workerIndex)############# CALL WORKER.getKeyValues(), return [(a,1),(b,1)..].
                 # each tuple element (x,y) will be convert to [x,y] by zerorpc, so convert [[a,1],[b,1]..] back to

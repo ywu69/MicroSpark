@@ -15,7 +15,7 @@ class Worker(object):
         self.worker_port = worker_port
         self.worker_ip = worker_ip
         self.RDD = RDD()
-        self.c = zerorpc.Client(timeout=60)
+        self.c = zerorpc.Client(timeout=500)
         self.c.connect("tcp://"+master_addr)
         self.c.register(worker_ip, worker_port, type)
         self.results = ""
