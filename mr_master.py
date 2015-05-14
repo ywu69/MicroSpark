@@ -89,6 +89,7 @@ class Master(object):
                             print "####" + str(self.current_intermediateRDD.workerlist)
 
                             self.set_job_for_single_worker(selected_worker, pickle_object)
+                            gevent.spawn(self.ping_worker,(selected_worker[0],selected_worker[1]), WORKER_NORMAL)
 
                             self.update_RDD_workerlists()
 
