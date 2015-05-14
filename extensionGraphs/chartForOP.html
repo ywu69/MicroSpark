@@ -1,0 +1,44 @@
+<html>
+<head>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+    google.load('visualization', '1', {packages: ['corechart', 'line']});
+    google.setOnLoadCallback(drawLineColors);
+
+    function drawLineColors() {
+          var data = new google.visualization.DataTable();
+          data.addColumn('number', 'X');
+          data.addColumn('number', 'LC_GK');
+          data.addColumn('number', 'LC_GK(OP)');
+          data.addColumn('number', 'LC_HP');
+          data.addColumn('number', 'LC_HP(OP)');
+
+          data.addRows([
+            [0.02,  0.0375278, 0.028438, 0.037052, 0.0250658],
+            [0.20,  0.2301396, 0.0377396, 0.2151156, 0.0390946],
+            [2.00,  3.3237607, 0.1392976, 5.3108707, 0.1404814],
+            [3.00,  null, 0.1965021, null, 0.1804331],
+            [4.00,  null, 0.2354829, null, 0.2134386],
+            [5.00,  null, 0.2645365, null, 0.2435248]
+          ]);
+
+          var options = {
+            hAxis: {
+              title: 'File Size'
+            },
+            vAxis: {
+              title: 'Execution Time'
+            },
+            width: 900,
+            height: 500
+          };
+
+          var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+          chart.draw(data, options);
+        }
+  </script>
+</head>
+<body>
+  <div id="chart_div"><div>
+</body>
+</html>

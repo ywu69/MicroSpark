@@ -1,0 +1,50 @@
+<html>
+<head>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+    google.load('visualization', '1', {packages: ['corechart', 'line']});
+    google.setOnLoadCallback(drawLineColors);
+
+    function drawLineColors() {
+          var data = new google.visualization.DataTable();
+          data.addColumn('number', 'X');
+          data.addColumn('number', 'LC_GK');
+          data.addColumn('number', 'LC_HP');
+          data.addColumn('number', 'SQ_GK');
+          data.addColumn('number', 'SQ_HP');
+          data.addColumn('number', 'CL_GK');
+          data.addColumn('number', 'CL_HP');
+
+          data.addRows([
+            [2.1,  0.1454656, 0.1390792, 1.1456874, 1.1376776, 5.662218, 4.668275],
+            [4.2,  1.2055808, 0.6050364, 2.19709633333, 2.2073846, 16.268667, 11.189023],
+            [6.3,  1.25555366667, 1.2439436, 2.57264633333, 3.242122, 24.750369, 18.647437],
+            [8.5,  2.25403933333, 2.25725933333, 3.24618066667, 4.579114, 30.77098, 23.852301],
+            [10.6,  3.26547066667, 2.26392933333, 4.26314366667, 5.26495133333, 37.113933, 31.191882],
+            [21.1,  5.314311, 5.31852466667, 8.64787633333, 10.9809606667, 57.392017, 42.352771],
+            [31.7,  8.328426, 8.683597, 12.3339575, 15.322098, 74.872278, 66.438235],
+            [42.3,  10.873103, 11.7138613333, 17.382437, 20.350656, 83.131065, null],
+            [52.8,  11.896239, 15.079882, 20.383305, 26.416138, null, null],
+            [63.4,  15.9242075, 18.437162, 24.411032, 30.445122, null, null]
+          ]);
+
+          var options = {
+            hAxis: {
+              title: 'File Size(MB)'
+            },
+            vAxis: {
+              title: 'Execution Time(SECOND)'
+            },
+            width: 900,
+            height: 500
+          };
+
+          var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+          chart.draw(data, options);
+        }
+  </script>
+</head>
+<body>
+  <div id="chart_div"><div>
+</body>
+</html>

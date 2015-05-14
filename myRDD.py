@@ -233,7 +233,7 @@ class RDD(object):
                     for i in tp:
                         keyValues.append((i[0],i[1]))
                     c.close()
-                    done = True
+            done = True
 
             if done is False:
                 gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
