@@ -180,21 +180,31 @@ class RDD(object):
 
     def __getAllKeys(self):
         allKeys = {}
-        for w in self.workerlist:
-            if self.workerlist[w] == self.workerIndex:
-                dic = {}
-                for i in self.datalist:
-                    dic[i[0]] = 1
-                remoteKeys = dic.keys()
-            else:
-                c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
-                print "connect to:" + str(w)
-                c.connect("tcp://"+w)
 
-                remoteKeys = c.getKeys(self.pipeID)######################### CALL WORKER.getKeys(), return [a,b..]
-                c.close()
+        done = False
+        while done is False:
+            for w in self.workerlist:
+                if self.workerlist[w] == self.workerIndex:
+                    dic = {}
+                    for i in self.datalist:
+                        dic[i[0]] = 1
+                    remoteKeys = dic.keys()
+                else:
+                    try:
+                        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+                        print "connect to:" + str(w)
+                        c.connect("tcp://"+w)
 
+                        remoteKeys = c.getKeys(self.pipeID)######################### CALL WORKER.getKeys(), return [a,b..]
+                        c.close()
+                    except Exception:
+                        #allKeys = []
+                        break
+                        gevent.sleep(params.SLEEP_INTERVAL_GENERAL)
+            done = True
             allKeys = self.__mergeKeys(allKeys,remoteKeys)
+
+
         return sorted(allKeys.keys())
 
     def __getAllKeyValues(self,keys):
