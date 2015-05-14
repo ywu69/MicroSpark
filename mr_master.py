@@ -249,10 +249,11 @@ class Master(object):
                      return None
                 else:
                     break
-            print "@@@@how many are finished?  " + str(count)
+            #print "@@@@how many are finished?  " + str(count)
 
             if count == len(self.workers):
                 print "#######################"
+                print "All Finished, tell Driver to collect"
                 # done, will break in next round
                 done = True
             else:
