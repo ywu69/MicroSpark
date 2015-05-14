@@ -87,6 +87,9 @@ def func():
     R = RDD(None, None, master_addr)
     # rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/inputfile2.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
     #rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/log.txt").flatMap(lambda x: x.split('\n')).filter(lambda x: x.startswith('ERROR'))
+    #rdd = R.TextFile("/home/blu2/cs636/MicroSpark/log.txt").flatMap(lambda x: x.split('\n')).filter(lambda x: x.startswith('ERROR'))
+
+
     #rdd.collect()
 
 
