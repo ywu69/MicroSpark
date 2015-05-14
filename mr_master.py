@@ -163,6 +163,8 @@ class Master(object):
 
 
     def set_job(self, pickle_object):
+        for w in self.workers:
+            self.workerState[(w[0], w[1])] = 'READY'
         gevent.spawn(self.setJob_async, pickle_object)
 
     def setJob_async(self, pickle_object):
