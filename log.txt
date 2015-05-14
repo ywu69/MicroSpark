@@ -1,0 +1,60 @@
+INFO    init Context
+INFO    create master
+INFO    create worker 1
+INFO    create worker 2
+DEBUG   worker num:2
+INFO    create RDD
+INFO    create RDD
+DEBUG   launch
+INFO    do reduceByKey
+ERROR   unable to parse results
+INFO    do map
+INFO    do reduceByKey
+INFO    create RDD
+DEBUG   clear
+DEBUG   launch
+DEBUG   do filter
+INFO    create worker 1
+INFO    create worker 2
+INFO    create RDD
+INFO    create RDD
+INFO    do collect
+INFO    print
+DEBUG   worker 1 lost on ping
+ERROR   worker 1 fails
+DEBUG   failed on reduceByKey
+DEBUG   clear
+INFO    createRDD
+INFO    createRDD
+INFO    duplicatedRDD
+INFO    do filter
+DEBUG   launch
+DEBUG   clear
+DEBUG   worker num:1
+INFO    do map
+INFO    do filter
+INFO    do groupByKey
+INFO    do count
+INFO    do collect
+INFO    print
+DEBUG   worker num:1
+ERROR   worker2 fails
+ERROR   fails on collect
+DEBUG   try add new worker
+DEBUG   select worker index:3
+INFO    create worker 3
+DEBUG   worker num:1
+DEBUG   worker status: ready
+INFO    create RDD
+INFO    create RDD
+INFO    do map
+INFO    do filter
+INFO    do groupByKey
+INFO    do count
+INFO    do collect
+INFO    print
+DEBUG   worker num:1
+DEBUG   try shut down
+DEBUG   shutting down
+DEBUG   ready to close
+DEBUG   goodbye

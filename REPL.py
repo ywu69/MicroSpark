@@ -82,11 +82,12 @@ def func():
     from datetime import datetime
     import params
     from Context import Context
-    C = Context()
-    #R = C.init()
-    R = RDD(None, None, C.getMasterAddress())
-    # rdd = R.TextFile("/Users/pengzhan/MicroSpark/inputfile4.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
-    # # rdd.collect()
+
+    master_addr = sys.argv[1]
+    R = RDD(None, None, master_addr)
+    # rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/inputfile2.txt").flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey_Hash(lambda a, b: a + b)
+    #rdd = R.TextFile("/Users/blu2/Documents/Github/MicroSpark/log.txt").flatMap(lambda x: x.split('\n')).filter(lambda x: x.startswith('ERROR'))
+    #rdd.collect()
 
 
     keyboard()

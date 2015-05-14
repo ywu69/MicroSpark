@@ -97,7 +97,7 @@ class RDD(object):
 
         worker_ips = c.result_is_ready()
 
-        print "####worker_ips for collect: " + str(worker_ips)
+        #print "####worker_ips for collect: " + str(worker_ips)
 
         final_results = []
 

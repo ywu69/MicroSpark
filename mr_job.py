@@ -1,5 +1,4 @@
 __author__ = 'pengzhan'
-# python mr_job.py 127.0.0.1:4242 wordcount 100000 4 book.txt count
 import zerorpc
 import sys
 from myRDD import *

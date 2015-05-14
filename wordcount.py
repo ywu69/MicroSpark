@@ -1,32 +1,26 @@
+import zerorpc
 import sys
+from myRDD import *
+import StringIO
+import cloudpickle
+from datetime import datetime
+import params
+from Context import Context
 
-#import mapreduce_class as mapreduce
-import mapreduce
-
-class WordCountMap(mapreduce.Map):
-
-    def map(self, k, v):
-        words = v.split()
-        for w in words:
-            self.emit(w, '1')
-
-class WordCountReduce(mapreduce.Reduce):
-
-    def reduce(self, k, vlist):
-        count = 0
-        for v in vlist:
-            count = count + int(v)
-        self.emit(k + ':' + str(count))
 
 if __name__ == '__main__':
 
-    f = open(sys.argv[1])
-    values = f.readlines()
-    f.close()
+    n = 1
+    start = datetime.now()
+    for i in range(0, n):
+        input_filename = sys.argv[1]
+        master_addr = sys.argv[2]
+        c = zerorpc.Client(timeout=params.GENERAL_TIMEOUT)
+        c.connect("tcp://"+master_addr)
 
-    engine = mapreduce.Engine(values, WordCountMap, WordCountReduce)
-    engine.execute()
-    result_list = engine.get_result_list()
-    
-    for r in result_list:
-        print r
+        R = RDD(None, None, master_addr)
+        rdd = R.TextFile(input_filename).flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a, b: a + b)
+        print rdd.collect()
+    end = datetime.now()
+    time = (end - start).total_seconds() / n
+    #print str(time)
